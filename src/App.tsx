@@ -1,10 +1,12 @@
-import { Reducer, useEffect, useReducer } from 'react';
+import { Reducer, useEffect, useMemo, useReducer } from 'react';
 import Main from './components/Main';
 import Header from './components/Header';
 import Loader from './components/Loader';
 import ErrorMessage from './components/ErrorMessage';
 import StartMessage from './components/StartMessage';
 import Question from './components/Question';
+import NextButton from './components/NextButton';
+import Progress from './components/Progress';
 
 export type QuestionType = {
   question: string;
@@ -29,7 +31,8 @@ type ReducerActionType =
   | 'dataReceived'
   | 'dataFailed'
   | 'start'
-  | 'answerReceived';
+  | 'answerReceived'
+  | 'nextQuestion';
 
 export type ActionType = {
   type: ReducerActionType;
@@ -37,6 +40,8 @@ export type ActionType = {
 };
 
 function reducer(prevState: IState, action: ActionType): IState {
+  const isNextQuestion =
+    prevState.questionIndex < prevState.questions.length - 1;
   const { type, payload } = action;
   switch (type) {
     case 'dataReceived':
@@ -53,7 +58,6 @@ function reducer(prevState: IState, action: ActionType): IState {
       const question = prevState.questions[prevState.questionIndex];
       // const isAnswerCorrect = question.correctOption === prevState.answer; // prevState.answer is not updated yet and is a stale state. updating a state (state.score) based on another state (state.answer) is wrong if both states are being updated at the same time
       const isAnswerCorrect = question.correctOption === payload?.answer;
-      console.log(isAnswerCorrect);
       return {
         ...prevState,
         answer: payload?.answer ?? null,
@@ -62,6 +66,24 @@ function reducer(prevState: IState, action: ActionType): IState {
           : prevState.score,
       };
     }
+    case 'nextQuestion': {
+      if (!isNextQuestion) return prevState;
+      // return {
+      //   ...prevState,
+      //   questionIndex: isNextQuestion
+      //     ? prevState.questionIndex + 1
+      //     : prevState.questionIndex,
+      //   answer: null,
+      // };
+      return {
+        ...prevState,
+        questionIndex: isNextQuestion
+          ? prevState.questionIndex + 1
+          : prevState.questionIndex,
+        answer: null,
+      };
+    }
+
     default: {
       const exhaustiveCase: ReducerActionType = type;
       throw new Error(`Unhandled case: ${exhaustiveCase}`);
@@ -85,6 +107,13 @@ function App() {
 
   const { questions, status, questionIndex, answer, score } = state;
   const questionsNum = questions.length;
+  const totalScore = useMemo(() => {
+    const totalPoints = questions.reduce((accu, question) => {
+      return accu + question.points;
+    }, 0);
+
+    return totalPoints;
+  }, [questions]);
 
   useEffect(() => {
     async function getData() {
@@ -118,13 +147,22 @@ function App() {
           <StartMessage questionsNum={questionsNum} dispatch={dispatch} />
         )}
         {status === 'active' && (
-          <Question
-            question={questions[questionIndex]}
-            dispatch={dispatch}
-            answer={answer}
-          />
+          <>
+            <Progress
+              questionIndex={questionIndex}
+              score={score}
+              questionsNum={questionsNum}
+              totalScore={totalScore}
+              answer={answer}
+            />
+            <Question
+              question={questions[questionIndex]}
+              dispatch={dispatch}
+              answer={answer}
+            />
+            <NextButton dispatch={dispatch} answer={answer} />
+          </>
         )}
-        <h2>{score}</h2>
       </Main>
     </main>
   );
