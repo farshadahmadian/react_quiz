@@ -1,4 +1,4 @@
-import { Reducer, useEffect, useMemo, useReducer } from 'react';
+import { Reducer, useEffect, useMemo, useReducer, useRef } from 'react';
 import Main from './components/Main';
 import Header from './components/Header';
 import Loader from './components/Loader';
@@ -7,6 +7,9 @@ import StartMessage from './components/StartMessage';
 import Question from './components/Question';
 import NextButton from './components/NextButton';
 import Progress from './components/Progress';
+import FinishScreen from './components/FinishScreen';
+import Timer from './components/Timer';
+import Footer from './components/Footer';
 
 export type QuestionType = {
   question: string;
@@ -23,6 +26,7 @@ interface IState {
   questionIndex: number;
   answer: number | null;
   score: number;
+  quizTime: number | null;
 }
 
 type PayloadType = Partial<IState>;
@@ -32,16 +36,31 @@ type ReducerActionType =
   | 'dataFailed'
   | 'start'
   | 'answerReceived'
-  | 'nextQuestion';
+  | 'nextQuestion'
+  | 'finishQuiz'
+  | 'restart'
+  | 'countDown';
 
 export type ActionType = {
   type: ReducerActionType;
   payload?: PayloadType;
 };
 
+const initialState: IState = {
+  questions: [],
+  status: 'loading',
+  questionIndex: 0,
+  answer: null,
+  score: 0,
+  quizTime: null,
+};
+
+const SEC_PER_QUESTION = 30;
+
 function reducer(prevState: IState, action: ActionType): IState {
   const isNextQuestion =
     prevState.questionIndex < prevState.questions.length - 1;
+
   const { type, payload } = action;
   switch (type) {
     case 'dataReceived':
@@ -53,7 +72,11 @@ function reducer(prevState: IState, action: ActionType): IState {
     case 'dataFailed':
       return { ...prevState, status: 'error' };
     case 'start':
-      return { ...prevState, status: 'active' };
+      return {
+        ...prevState,
+        status: 'active',
+        quizTime: prevState.questions.length * SEC_PER_QUESTION,
+      };
     case 'answerReceived': {
       const question = prevState.questions[prevState.questionIndex];
       // const isAnswerCorrect = question.correctOption === prevState.answer; // prevState.answer is not updated yet and is a stale state. updating a state (state.score) based on another state (state.answer) is wrong if both states are being updated at the same time
@@ -68,13 +91,6 @@ function reducer(prevState: IState, action: ActionType): IState {
     }
     case 'nextQuestion': {
       if (!isNextQuestion) return prevState;
-      // return {
-      //   ...prevState,
-      //   questionIndex: isNextQuestion
-      //     ? prevState.questionIndex + 1
-      //     : prevState.questionIndex,
-      //   answer: null,
-      // };
       return {
         ...prevState,
         questionIndex: isNextQuestion
@@ -83,21 +99,27 @@ function reducer(prevState: IState, action: ActionType): IState {
         answer: null,
       };
     }
-
+    case 'finishQuiz':
+      return { ...prevState, status: 'finish' };
+    case 'restart':
+      return {
+        ...initialState,
+        status: 'ready',
+        questions: prevState.questions,
+      };
+    case 'countDown':
+      return {
+        ...prevState,
+        quizTime: prevState.quizTime ? prevState.quizTime - 1 : 0,
+        status:
+          prevState.quizTime && prevState.quizTime > 0 ? 'active' : 'finish',
+      };
     default: {
-      const exhaustiveCase: ReducerActionType = type;
+      const exhaustiveCase: never = type;
       throw new Error(`Unhandled case: ${exhaustiveCase}`);
     }
   }
 }
-
-const initialState: IState = {
-  questions: [],
-  status: 'loading',
-  questionIndex: 0,
-  answer: null,
-  score: 0,
-};
 
 function App() {
   const [state, dispatch] = useReducer<Reducer<IState, ActionType>>(
@@ -105,8 +127,15 @@ function App() {
     initialState
   );
 
-  const { questions, status, questionIndex, answer, score } = state;
-  const questionsNum = questions.length;
+  const highScore = useRef<number>(
+    JSON.parse(localStorage.getItem('highScore') ?? '0')
+  );
+
+  const { questions, status, questionIndex, answer, score, quizTime } = state;
+  const questionsNum = useMemo(() => {
+    return questions.length;
+  }, [questions.length]);
+
   const totalScore = useMemo(() => {
     const totalPoints = questions.reduce((accu, question) => {
       return accu + question.points;
@@ -160,8 +189,26 @@ function App() {
               dispatch={dispatch}
               answer={answer}
             />
-            <NextButton dispatch={dispatch} answer={answer} />
+            <Footer>
+              <NextButton
+                dispatch={dispatch}
+                answer={answer}
+                questionIndex={questionIndex}
+                questionsNum={questionsNum}
+                highScore={highScore}
+                score={score}
+              />
+              <Timer quizTime={quizTime} dispatch={dispatch} />
+            </Footer>
           </>
+        )}
+        {status === 'finish' && (
+          <FinishScreen
+            score={score}
+            totalScore={totalScore}
+            highScore={highScore}
+            dispatch={dispatch}
+          />
         )}
       </Main>
     </main>

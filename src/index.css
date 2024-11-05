@@ -257,3 +257,11 @@ progress {
   font-size: inherit;
   padding: 0.8rem;
 }
+
+.minute {
+  margin-right: 1px;
+}
+
+.second {
+  margin-left: 1px;
+}

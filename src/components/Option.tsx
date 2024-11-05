@@ -25,7 +25,6 @@ function Option({ answer, question, dispatch, i, option }: OptionPropsType) {
           type: 'answerReceived',
           payload: {
             answer: i,
-            // score: i === question.correctOption ? question.points : 0,
             score: question.points,
           },
         });
