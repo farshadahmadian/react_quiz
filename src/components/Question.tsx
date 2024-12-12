@@ -1,17 +1,14 @@
-import { QuestionType, ActionType } from '../App';
-import Options from './Options';
+import useQuizContext from "../contexts/useQuizContext";
+import Options from "./Options";
 
-type QuestionPropsType = {
-  question: QuestionType;
-  dispatch: React.Dispatch<ActionType>;
-  answer: number | null;
-};
-
-function Question({ question, dispatch, answer }: QuestionPropsType) {
+function Question() {
+  const {
+    state: { questions, questionIndex },
+  } = useQuizContext();
   return (
     <div>
-      <h4>{question.question}</h4>
-      <Options question={question} dispatch={dispatch} answer={answer} />
+      <h4>{questions[questionIndex].question}</h4>
+      <Options />
     </div>
   );
 }

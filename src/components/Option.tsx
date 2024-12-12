@@ -1,28 +1,35 @@
-import { OptionsPropsType } from './Options';
+import useQuizContext from "../contexts/useQuizContext";
 
-type OptionPropsType = OptionsPropsType & {
+type OptionPropsType = {
   i: number;
   option: string;
 };
 
-function Option({ answer, question, dispatch, i, option }: OptionPropsType) {
+function Option({ i, option }: OptionPropsType) {
+  const {
+    state: { answer, questionIndex, questions },
+    dispatch,
+  } = useQuizContext();
+
+  const question = questions[questionIndex];
+
   return (
     <button
-      className={`btn btn-option ${answer === i ? 'answer' : ''} ${
+      className={`btn btn-option ${answer === i ? "answer" : ""} ${
         answer === null
-          ? ''
+          ? ""
           : answer === question.correctOption && answer === i
-          ? 'correct'
+          ? "correct"
           : answer !== question.correctOption && answer === i
-          ? 'wrong'
+          ? "wrong"
           : answer !== question.correctOption && question.correctOption === i
-          ? 'correct'
-          : ''
+          ? "correct"
+          : ""
       }`}
       disabled={answer !== null}
       onClick={() => {
         dispatch({
-          type: 'answerReceived',
+          type: "answerReceived",
           payload: {
             answer: i,
             score: question.points,

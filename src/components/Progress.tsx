@@ -1,20 +1,13 @@
-type ProgressPropsType = {
-  questionIndex: number;
-  score: number;
-  questionsNum: number;
-  totalScore: number;
-  answer: number | null;
-};
+import useQuizContext from "../contexts/useQuizContext";
 
-function Progress({
-  questionIndex,
-  score,
-  questionsNum,
-  totalScore,
-  answer,
-}: ProgressPropsType) {
+function Progress() {
+  const {
+    state: { score, answer, questionIndex },
+    questionsNum,
+    totalScore,
+  } = useQuizContext();
   return (
-    <header className='progress'>
+    <header className="progress">
       <progress
         max={questionsNum}
         // value={answer !== null ? questionIndex + 1 : questionIndex}
